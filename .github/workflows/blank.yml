@@ -36,3 +36,34 @@ jobs:
         run: |
           echo Add other actions to build,
           echo test, and deploy your project.
+
+      - name: Base SHA
+        id: base-sha
+        run: echo "sha=$(git rev-parse origin/main)" >> $GITHUB_OUTPUT
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with: 
+          files: '**/*.rst'
+          base_sha: "${{ steps.base-sha.outputs.sha }}"
+
+      - name: Split file names
+        id: split-file-names
+        run: |
+          WORD_COUNT=$(echo "${{ steps.changed-files.outputs.all_changed_and_modified_files }}" | wc -w)
+          echo "word_count=$WORD_COUNT" >> $GITHUB_OUTPUT
+      
+      - name: Add comment to PR
+        uses: peter-evans/create-or-update-comment@7dfe4b0aa0c4bbd06d172692ff8a9e18381d6979 
+# v3.0.1
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
+          COUNT: ${{ steps.split-file-names.outputs.word_count }}
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            The following files were changed in this pull request:
+            ${{ env.ALL_CHANGED_FILES }}
+
+            Total no of changed files: ${{ env.COUNT }}
